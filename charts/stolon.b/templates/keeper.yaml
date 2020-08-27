@@ -5,11 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   serviceName: "stolon-keeper"
-  replicas: {{ .Values.keeper.replicaCount }}
-  selector:
-    matchLabels:
-      component: stolon-keeper
-      stolon-cluster: {{ .Values.clusterName }}
+  replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:

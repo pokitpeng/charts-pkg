@@ -4,11 +4,7 @@ metadata:
   name: stolon-proxy
   namespace: {{ .Release.Namespace }}
 spec:
-  replicas: {{ .Values.proxy.replicaCount }}
-  selector:
-    matchLabels:
-      component: stolon-proxy
-      stolon-cluster: {{ .Values.clusterName }}
+  replicas: 2
   template:
     metadata:
       labels:

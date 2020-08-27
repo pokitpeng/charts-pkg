@@ -1,0 +1,44 @@
+{{- if not .Values.persistence.storageClass }}
+{{- range $index, $node := .Values.persistence.nodes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "{{ $.Values.clusterName }}-stolon-data-stolon-keeper-{{ $index }}"
+  namespace: {{ $.Release.Namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.persistence.size | quote }}
+  selector:
+    matchLabels:
+      name: "{{ $.Values.clusterName }}-stolon-data"
+      node: "node-{{ $index }}"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $.Values.clusterName }}-stolon-data-stolon-keeper-{{ $index }}"
+  labels:
+    name: "{{ $.Values.clusterName }}-stolon-data"
+    node: "node-{{ $index }}"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: {{ $.Values.persistence.size | quote }}
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "{{ $node.path }}"
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - "{{ $node.hostname }}"
+---
+{{- end }}
+{{- end }}

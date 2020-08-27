@@ -5,14 +5,11 @@ postgres:
   password: postgres
 
 ## Number of replicas
-keeper:
-  replicaCount: 1
-proxy:
-  replicaCount: 1
+replicaCount: 3
 
 image:
   repository: sorintlab/stolon
-  tag: v0.14.0-pg11.6
+  tag: v0.14.0-pg10
 
 ## Data Persistency
 persistence:
