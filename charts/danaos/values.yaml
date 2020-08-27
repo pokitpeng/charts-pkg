@@ -1,0 +1,23 @@
+etcdEndpoints:
+postgres:
+  replicas: 3
+  username: danaos
+  password: db_password
+registry:
+  persistence:
+    storageClass: local-path
+    size: 1Gi
+    # nodes:
+    # - hostname: n95
+    #   path: /data/test1
+
+prometheus:
+  persistence:
+    storageClass: local-path
+    size: 1Gi
+
+danaos:
+  privateKey:
+  publicCrt:
+# enable gpu
+gpu: false

@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: danaos
+  name: danaos-certs
+data:
+  private.key: |
+    {{ .Values.danaos.privateKey }}
+  public.crt: |
+    {{ .Values.danaos.publicCrt }}

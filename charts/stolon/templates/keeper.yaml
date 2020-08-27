@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stolon-keeper
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceName: "stolon-keeper"
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        component: stolon-keeper
+        stolon-cluster: {{ .Values.clusterName }}
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: stolon
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: stolon-keeper
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        command:
+          - "/bin/bash"
+          - "-ec"
+          - |
+            # Generate our keeper uid using the pod index
+            IFS='-' read -ra ADDR <<< "$(hostname)"
+            export STKEEPER_UID="keeper${ADDR[-1]}"
+            export POD_IP=$(hostname -i)
+            export STKEEPER_PG_LISTEN_ADDRESS=$POD_IP
+            export STOLON_DATA=/stolon-data
+            chown stolon:stolon $STOLON_DATA
+            exec gosu stolon stolon-keeper --data-dir $STOLON_DATA
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: STKEEPER_CLUSTER_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.labels['stolon-cluster']
+          - name: STKEEPER_STORE_BACKEND
+            value: "kubernetes"
+          - name: STKEEPER_KUBE_RESOURCE_KIND
+            value: "configmap"
+          - name: STKEEPER_PG_REPL_USERNAME
+            value: "repluser"
+          - name: STKEEPER_PG_REPL_PASSWORD
+            value: "replpassword"
+          - name: STKEEPER_PG_SU_USERNAME
+            value: {{ .Values.postgres.username | quote }}
+          - name: STKEEPER_PG_SU_PASSWORD
+            value: {{ .Values.postgres.password | quote }}
+          - name: STKEEPER_METRICS_LISTEN_ADDRESS
+            value: "0.0.0.0:8080"
+        ports:
+          - containerPort: 5432
+          - containerPort: 8080
+        volumeMounts:
+        - mountPath: /stolon-data
+          name: {{ .Values.clusterName }}-stolon-data
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.clusterName }}-stolon-data
+    {{- if .Values.persistence.storageClass }}
+    spec:
+      storageClassName: "{{ .Values.persistence.storageClass }}"
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | quote }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stolon-keeper-headless
+  labels:
+    stolon-cluster: {{ .Values.clusterName }}
+    component: stolon-keeper
+spec:
+  clusterIP: None
+  ports:
+    - name: dbport
+      port: 5432
+      targetPort: 5432
+    - name: metrics
+      port: 8080
+      targetPort: 8080
+  selector:
+    stolon-cluster: {{ .Values.clusterName }}
+    component: stolon-keeper

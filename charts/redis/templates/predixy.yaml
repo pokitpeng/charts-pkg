@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: predixy-config
+  labels:
+    app: predixy
+data:
+  predixy.conf: |
+      Name PredixyExample
+      ## bind
+      Bind 0.0.0.0:6379
+      ## Worker threads
+      WorkerThreads 1
+      ClientTimeout 300
+      ## log
+      LogVerbSample 0
+      LogDebugSample 0
+      LogInfoSample 10000
+      LogNoticeSample 1
+      LogWarnSample 1
+      LogErrorSample 1
+      ## Sentinel
+      SentinelServerPool {
+        Distribution modula
+        MasterReadPriority 60
+        StaticSlaveReadPriority 50
+        DynamicSlaveReadPriority 50
+        RefreshInterval 1
+        ServerTimeout 1
+        ServerFailureLimit 10
+        ServerRetryTimeout 1
+        KeepAlive 120
+        Sentinels {
+{{- $replicas := int .Values.replicas }}
+{{- $root := . }}
+{{- range $i := until $replicas }}
+            + {{ $root.Values.clusterName }}-redis-server-{{ $i }}.{{ $root.Values.clusterName }}-redis:26379
+{{- end }}
+        }
+        Group {{ .Values.redis.masterGroupName }} {
+        }
+      }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: predixy
+spec:
+  selector:
+    matchLabels:
+      app: predixy
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: predixy
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: predixy
+        image: {{ .Values.predixy.image.repository }}:{{ .Values.predixy.image.tag }}
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: conf
+          mountPath: /etc/predixy/
+      volumes:
+      - name: conf
+        configMap:
+          name: predixy-config
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: predixy-service
+spec:
+  selector:
+    app: predixy
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  # type: NodePort

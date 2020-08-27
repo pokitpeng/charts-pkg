@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stolon
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: stolon
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - pods
+    - endpoints
+    - configmaps
+    - events
+  verbs:
+    - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: stolon
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: stolon
+subjects:
+- kind: ServiceAccount
+  name: stolon

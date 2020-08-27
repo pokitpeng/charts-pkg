@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  namespace: danaos
+  name: metallb-speaker
+  labels:
+    k8s-app: metallb
+    component: speaker
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metallb
+      component: speaker
+  template:
+    metadata:
+      labels:
+        k8s-app: metallb
+        component: speaker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7472"
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      serviceAccountName: metallb-speaker
+      terminationGracePeriodSeconds: 0
+      hostNetwork: true
+      containers:
+        - name: metallb-speaker
+          image: metallb/speaker:v0.8.1_fix1
+          imagePullPolicy: IfNotPresent
+          args:
+            - --port=7472
+            - --config=metallb-config
+          env:
+            - name: METALLB_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: monitoring
+              containerPort: 7472
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - all
+              add:
+                - net_raw

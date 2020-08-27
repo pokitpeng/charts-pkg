@@ -1,0 +1,44 @@
+{{- if not .Values.registry.persistence.storageClass }}
+{{- range $index, $node := .Values.registry.persistence.nodes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "registry-volume-registry-{{ $index }}"
+  namespace: {{ $.Release.Namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.registry.persistence.size | quote }}
+  selector:
+    matchLabels:
+      name: "registry-volume"
+      node: "node-{{ $index }}"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "registry-volume-registry-{{ $index }}"
+  labels:
+    name: "registry-volume"
+    node: "node-{{ $index }}"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: {{ $.Values.registry.persistence.size | quote }}
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "{{ $node.path }}"
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - "{{ $node.hostname }}"
+---
+{{- end }}
+{{- end }}

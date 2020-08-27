@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: danaos
+  name: metallb-controller
+  labels:
+    k8s-app: metallb
+    component: controller
+spec:
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      k8s-app: metallb
+      component: controller
+  template:
+    metadata:
+      labels:
+        k8s-app: metallb
+        component: controller
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "7472"
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      serviceAccountName: metallb-controller
+      terminationGracePeriodSeconds: 0
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534 # nobody
+      containers:
+        - name: metallb-controller
+          image: metallb/controller:v0.8.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - --port=7472
+            - --config=metallb-config
+          ports:
+            - name: monitoring
+              containerPort: 7472
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - all
+            readOnlyRootFilesystem: true

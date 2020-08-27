@@ -1,0 +1,29 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: danaos-db-init
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      restartPolicy: OnFailure
+      containers:
+      - command:
+        - /bin/bash
+        - -ec
+        - |
+          touch -f .pgpass
+          chmod 600 .pgpass
+          echo "*:*:*:${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}" > .pgpass
+          PGPASSFILE=./.pgpass createdb -h $POSTGRES_HOST -U $POSTGRES_USERNAME -w danaos
+        image: sorintlab/stolon:v0.14.0-pg11.6
+        name: danaos-db-init
+        env:
+          - name: POSTGRES_HOST
+            value: stolon-proxy-service
+          - name: POSTGRES_USERNAME
+            value: {{ .Values.postgres.username | quote }}
+          - name: POSTGRES_PASSWORD
+            value: {{ .Values.postgres.password | quote }}

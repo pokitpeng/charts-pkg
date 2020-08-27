@@ -1,0 +1,51 @@
+{{- if .Values.gpu }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    app: gpu-metrics
+    name: gpu-metrics
+  name: gpu-metrics
+  namespace: danaos
+spec:
+  clusterIP: None
+  ports:
+    - name: scrape
+      port: 9101
+      protocol: TCP
+  selector:
+    app: gpu-metrics
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gpu-metrics
+  namespace: danaos
+spec:
+  selector:
+    matchLabels:
+      app: gpu-metrics
+  template:
+    metadata:
+      labels:
+        app: gpu-metrics
+      name: gpu-metrics
+    spec:
+      enableServiceLinks: false
+      nodeSelector:
+        gpushare: "true"
+      hostNetwork: true
+      hostPID: true
+      restartPolicy: Always
+      containers:
+        - image: gpu-metrics:v1.0
+          name: gpu-metrics
+          ports:
+            - containerPort: 9101
+              hostPort: 9101
+              name: scrape
+{{- end }}

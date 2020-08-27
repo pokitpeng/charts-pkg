@@ -1,0 +1,98 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+spec:
+  serviceName: {{ .Values.clusterName }}-rabbitmq-discovery
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+        cluster: {{ .Values.clusterName }}
+    spec:
+      serviceAccountName: rabbitmq
+      initContainers:
+      # This init container copies the config files from read-only ConfigMap to writable location.
+      - name: copy-rabbitmq-config
+        image: busybox
+        command:
+        - /bin/sh
+        - -euc
+        - |
+          # Remove cached erlang cookie since we are always providing it,
+          # that opens the way to recreate the application and access to existing data
+          # as a new erlang will be regenerated again.
+          rm -f /var/lib/rabbitmq/.erlang.cookie
+          # Copy the mounted configuration to both places.
+          cp /rabbitmqconfig/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
+          cp /rabbitmqconfig/enabled_plugins /etc/rabbitmq/enabled_plugins
+        volumeMounts:
+        - name: configmap
+          mountPath: /rabbitmqconfig
+        - name: config
+          mountPath: /etc/rabbitmq
+        - name: {{ .Values.clusterName }}-rabbitmq-data
+          mountPath: /var/lib/rabbitmq
+      containers:
+      - name: rabbitmq
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: RABBITMQ_ERLANG_COOKIE
+          value: {{ .Values.clusterName | quote }}
+        - name: RABBITMQ_USE_LONGNAME
+          value: "true"
+        - name: RABBITMQ_NODENAME
+          value: "rabbit@$(NODE_NAME).{{ .Values.clusterName }}-rabbitmq-discovery.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}"
+        ports:
+        - containerPort: 5672
+          name: amqp
+        livenessProbe:
+          exec:
+            command:
+              - rabbitmqctl
+              - status
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+        volumeMounts:
+        - name: {{ .Values.clusterName }}-rabbitmq-data
+          mountPath: /var/lib/rabbitmq
+        - name: config
+          mountPath: /etc/rabbitmq
+        - name: definitions
+          mountPath: /etc/definitions
+          readOnly: true
+      volumes:
+      - name: configmap
+        configMap:
+          name: {{ .Values.clusterName }}-rabbitmq-config
+          items:
+          - key: rabbitmq.conf
+            path: rabbitmq.conf
+          - key: enabled_plugins
+            path: enabled_plugins
+      - name: definitions
+        configMap:
+          name: {{ .Values.clusterName }}-rabbitmq-config
+          items:
+          - key: definitions.json
+            path: definitions.json
+      - name: config
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Values.clusterName }}-rabbitmq-data
+    {{- if .Values.persistence.storageClass }}
+    spec:
+      storageClassName: "{{ .Values.persistence.storageClass }}"
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.persistence.size | quote }}
+    {{- end }}

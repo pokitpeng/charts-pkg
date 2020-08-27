@@ -1,0 +1,23 @@
+clusterName: danaos
+
+postgres:
+  username: postgres
+  password: postgres
+
+## Number of replicas
+replicaCount: 3
+
+image:
+  repository: sorintlab/stolon
+  tag: v0.14.0-pg10
+
+## Data Persistency
+persistence:
+  ## If defined, storageClassName: <storageClass>
+  storageClass: local-path
+  size: 1Gi
+  # nodes:
+  # - hostname: n95
+  #   path: /data/test1
+  # - hostname: n95
+  #   path: /data/test2

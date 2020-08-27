@@ -1,0 +1,26 @@
+{{- $replicas := int .Values.replicas }}
+{{- $root := . }}
+{{- range $i := until $replicas }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $root.Values.clusterName }}-redis-announce-{{ $i }}
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  publishNotReadyAddresses: true
+  type: ClusterIP
+  ports:
+  - name: server
+    port: {{ $root.Values.redis.port }}
+    protocol: TCP
+    targetPort: redis
+  - name: sentinel
+    port: {{ $root.Values.sentinel.port }}
+    protocol: TCP
+    targetPort: sentinel
+  selector:
+    app: {{ $root.Values.clusterName }}-redis
+    "statefulset.kubernetes.io/pod-name": {{ $root.Values.clusterName }}-redis-server-{{ $i }}
+{{- end }}

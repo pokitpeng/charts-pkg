@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: archer
+  namespace: danaos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: archer
+  template:
+    metadata:
+      labels:
+        component: archer
+    spec:
+      enableServiceLinks: false
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      containers:
+      - name: archer
+        image: archer:v2.0
+        env:
+          - name: ARCHER_ETCDENDPOINTS
+            value: "{{ .Values.etcdEndpoints }}"
+          - name: ARCHER_POSTGRESADDR
+            value: "stolon-proxy-service"
+        ports:
+          - containerPort: 5001
+        volumeMounts:
+          - name: danaos-certs
+            mountPath: /etc/danaos/
+            readOnly: true
+          - name: kubeconfig
+            mountPath: /etc/kubernetes
+            readOnly: true
+      volumes:
+        - name: danaos-certs
+          secret:
+            secretName: danaos-certs
+        - name: kubeconfig
+          hostPath:
+            path: /etc/kubernetes/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: danaos
+  name: archer-service
+spec:
+  type: NodePort
+  ports:
+    - port: 5001
+      targetPort: 5001
+      nodePort: 31001
+  selector:
+    component: archer
