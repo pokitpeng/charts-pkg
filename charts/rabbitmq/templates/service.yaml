@@ -1,0 +1,39 @@
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: {{ .Values.clusterName }}-rabbitmq
+#   namespace: {{ .Release.Namespace }}
+#   labels:
+#     app: rabbitmq
+#     cluster: {{ .Values.clusterName }}
+# spec:
+#   type: NodePort
+#   #clusterIP: None
+#   ports:
+#   - port: 5672
+#     name: amqp
+#   - port: 15672
+#     name: http
+#   selector:
+#     app: rabbitmq
+#     cluster: {{ .Values.clusterName }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.clusterName }}-rabbitmq-discovery
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rabbitmq
+    cluster: {{ .Values.clusterName }}
+spec:
+  type: NodePort
+  #clusterIP: None
+  ports:
+  - port: 5672
+    name: amqp
+  - port: 15672
+    name: http
+  selector:
+    app: rabbitmq
+    cluster: {{ .Values.clusterName }}

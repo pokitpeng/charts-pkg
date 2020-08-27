@@ -1,0 +1,32 @@
+clusterName: datrix
+
+rabbitmq:
+  vhost: /
+  username: admin
+  password: datatom.com
+  memoryHighWatermark: "0.85"
+
+## Number of replicas
+replicaCount: 1
+
+image:
+  repository: 192.168.50.3:5000/datatomimage/rabbitmq
+  tag: v3.7.8
+  #repository: 192.168.50.3:5000/datatomimage/rabbitmq
+  #tag: v3.7.8
+
+## Data Persistency
+persistence:
+  ## If defined, storageClassName: <storageClass>
+  storageClass: local-path
+  size: 1Gi
+  # nodes:
+  # - hostname: n95
+  #   path: /data/test1
+  # - hostname: n95
+  #   path: /data/test2
+
+nodePort: true
+
+## Kubernetes Cluster Domain
+clusterDomain: danaos.local
