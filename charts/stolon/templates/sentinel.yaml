@@ -5,6 +5,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: 2
+  selector:
+    matchLabels:
+      component: stolon-sentinel
   template:
     metadata:
       labels:
